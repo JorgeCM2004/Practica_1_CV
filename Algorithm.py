@@ -1,5 +1,5 @@
 import os
-import numpy
+import numpy as np
 import cv2
 from glob import glob
 from Detector_PI import Detector_PI
@@ -14,7 +14,11 @@ class Algorithm:
 
         self.detector_pi = Detector_PI("SIFT")
 
+        # Leer y almacenar variables y parametros dados por el problema.
         self._read_all()
+
+        # Calcular la matriz que transforma de milimetros a pixeles.
+        self._calculate_H_mm2template()
 
     def _read_all(self):
         self._read_images()
@@ -60,10 +64,15 @@ class Algorithm:
         try:
             # Intrinsics si se recibe la ruta.
             if self.test_path:
-                self.K = numpy.loadtxt(os.path.join(self.test_path, "intrinsics.txt"))
+                self.K = np.loadtxt(os.path.join(self.test_path, "intrinsics.txt"))
             # Intrinsics si hay que buscar la carpeta.
             else:
-                self.K = numpy.loadtxt(os.path.join(self.dir_path, "imgs_template_real", "secuencia", "intrinsics.txt"))
+                self.K = np.loadtxt(os.path.join(self.dir_path, "imgs_template_real", "secuencia", "intrinsics.txt"))
         except:
             raise FileNotFoundError("Error al cargar 'intrinsics.txt'.")
 
+    def _calculate_H_mm2template(self):
+        # Esquinas: derecha arriba, izquierda arriba, derecha abajo, izquierda abajo.
+        mm_mat = np.array([[0, 0], [210, 0], [0, 185], [210, 185]], dtype = np.float32) # Milimetros
+        pixel_mat = np.array([[0, 0], [1484, 0], [0, 1307], [1484, 1307]], dtype = np.float32) # Píxeles
+        self.H_mm2template = cv2.getPerspectiveTransform(mm_mat, pixel_mat)

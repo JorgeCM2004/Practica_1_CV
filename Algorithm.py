@@ -2,14 +2,17 @@ import os
 import numpy
 import cv2
 from glob import glob
+from Detector_PI import Detector_PI
 
-class Detector:
+class Algorithm:
     def __init__(self, test_path: str, models_path: str):
         self.dir_path = os.path.dirname(__file__) # Ruta absoluta donde se encuentra la carpeta madre.
 
         self.test_path = test_path
 
         self.models_path = models_path
+
+        self.detector_pi = Detector_PI("SIFT")
 
         self._read_all()
 
@@ -64,5 +67,3 @@ class Detector:
         except:
             raise FileNotFoundError("Error al cargar 'intrinsics.txt'.")
 
-
-Detector(None, None)

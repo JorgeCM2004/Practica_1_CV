@@ -1,17 +1,5 @@
-import os
-from typing import Literal
+from Detector import Detector
 
-class Ransac:
-    def __init__(self):
-        self.file_path = os.path.abspath(__file__) # Ruta absoluta donde se encuentra el archivo.
-        #self.state = None
-
-    def secuencia(self): # Usa archivos de la carpeta secuencia.
-        self.state = "secuencia"
-
-    def test(self): # Usa archivos de la carpeta de test.
-        self.state = "test"
-
-    def _read_intrinsct(self):
-        with open(os.path.join(self.file_path, "imgs_template_real", "secuencia", "intri")) as file:
-            pass
+class RANSAC(Detector):
+    def __init__(self, test_path, models_path):
+        super().__init__(test_path, models_path)

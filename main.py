@@ -3,7 +3,34 @@ import argparse
 from glob import glob
 import numpy as np
 import cv2
+from typing import Literal
 
+class Runner:
+    def __init__(self,
+                 detector: Literal["KEYPOINTS"] = "KEYPOINTS",
+                 test_path: str = None,
+                 models_path: str = None):
+
+        # Definir nombre del detector:
+        self.detector_name = detector
+
+        # Definir path de la carpeta de imagenes:
+        if test_path:
+            self.test_path = test_path
+        else:
+            self.test_path = None
+
+        # Definir path de la carpeta de los modelos 3D:
+        if models_path:
+            self.models_path = models_path
+        else:
+            self.models_path = None
+
+    def run(self, save: bool = True):
+        # Comprobación de tipos en parametro save.
+        if not isinstance(save, bool):
+            raise TypeError("El tipo de 'save' debe ser booleano (True o False).")
+        pass
 
 if __name__ == '__main__':
 
@@ -11,9 +38,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--detector', type=str, nargs="?", default="KEYPOINTS", help='Nombre del detector a ejecutar')
     parser.add_argument(
-        '--test_path', default="", help='Carpeta con las imágenes de test')
+        '--test_path', default = None, help = 'Carpeta con las imágenes de test')
     parser.add_argument(
-        '--models_path', default="", help='Carpeta con los modelos 3D (.obj)')
+        '--models_path', default = None, help = 'Carpeta con los modelos 3D (.obj)')
     args = parser.parse_args()
 
 
@@ -21,14 +48,14 @@ if __name__ == '__main__':
     print("Detector seleccionado " + args.detector)
     planar_localizer_name = args.detector
 
-    # Cargar la imagen de la plantilla escaneada
+    """    # Cargar la imagen de la plantilla escaneada
     template_img_path = os.path.join(args.test_path, "template_cropped.png")
     template_img = cv2.imread(template_img_path)
     if template_img is None:
-        print("No puedo encontrar la imagen " + template_img_path)
+        print("No puedo encontrar la imagen " + template_img_path)"""# Hecho dentro de detector.
 
-    # Leer la matriz de intrínsecos de la cámara.
-    K = np.load(os.path.join(args.test_path, "intrinsics.txt"))
+    """# Leer la matriz de intrínsecos de la cámara.
+    K = np.load(os.path.join(args.test_path, "intrinsics.txt"))""" # Hecho dentro de detector.
 
     # Crear el detector de la plantilla pertinente (con KEYPOINTS u otro).
 #    if args.detector == "KEYPOINTS:
@@ -66,10 +93,3 @@ if __name__ == '__main__':
         cv2.waitKey(1000)
 
         # Guardar la imagen resultado en el directorio os.path.join(images_path, "resultado_imgs")
-
-
-
-
-
-
-

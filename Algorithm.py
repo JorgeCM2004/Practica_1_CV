@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 from glob import glob
 from Detector_PI import Detector_PI
+from model3d import Model3D
 
 class Algorithm:
     def __init__(self, test_path: str, models_path: str):
@@ -44,7 +45,11 @@ class Algorithm:
 
 
     def _read_3D_object(self):
-        pass
+        self.model3d = Model3D()
+        if self.models_path:
+            self.model3d.load_from_obj(self.models_path)
+        else:
+            self.model3d.load_from_obj(os.path.join(self.dir_path, "3d_models", "cubo.obj"))
 
     def _read_template_cropped(self):
         try:

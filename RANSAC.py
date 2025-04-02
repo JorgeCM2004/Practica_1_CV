@@ -28,6 +28,12 @@ class RANSAC(Algorithm):
             for point, color in points_colors:
                 point_image = (round(point[0] / point[2]), round(point[1] / point[2]))
                 cv2.line(image_copy, origin_point_image, point_image, color, 5)
+            self._read_3D_object()
+            self.model3d.translate(np.array([10, 10, 0]).reshape(1, -1))
+            self.model3d.scale(10.0)
+            self.model3d.plot_on_image(image_copy, P)
+            plt.imshow(image_copy)
+            plt.show()
 
 
 RANSAC(None, None).execute()

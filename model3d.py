@@ -101,5 +101,5 @@ class Model3D:
                      int(self.color_map[i,2]))
             pts = np.vstack((pt0, pt1, pt2))
             cv2.fillPoly(img, [pts], color)
-            
-            
+
+

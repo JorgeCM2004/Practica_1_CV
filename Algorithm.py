@@ -79,5 +79,5 @@ class Algorithm:
     def _calculate_H_mm2template(self):
         # Esquinas: derecha arriba, izquierda arriba, derecha abajo, izquierda abajo.
         mm_mat = np.array([[0, 0], [210, 0], [0, 185], [210, 185]], dtype = np.float32) # Milimetros
-        pixel_mat = np.array([[0, 0], [1484, 0], [0, 1307], [1484, 1307]], dtype = np.float32) # Píxeles
+        pixel_mat = np.array([[0, 0], [self.template_img.shape[1], 0], [0, self.template_img.shape[0]], [self.template_img.shape[1],  self.template_img.shape[0]]], dtype = np.float32) # Píxeles
         self.H_mm2template = cv2.getPerspectiveTransform(mm_mat, pixel_mat)

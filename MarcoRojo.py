@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 #import matplotlib.pyplot as plt
+from copy import copy
 from Algorithm import Algorithm
 
 class MarcoRojo(Algorithm):
@@ -9,12 +10,13 @@ class MarcoRojo(Algorithm):
 
 
     def execute(self):
-        imagen_sin_umbralizar = self.template_img
-        imagen = self.umbralizadoRojo(imagen_sin_umbralizar)
-        #Binarizar la imagen
-        imgCanny = cv2.Canny(imagen, 10, 50)
-        hsv = cv2.cvtColor(imagen, cv2.COLOR_BGR2HSV)
 
+        imagen_original = self.template_img.copy()        
+        gris = cv2.cvtColor(imagen_original, cv2.COLOR_BGR2GRAY)
+        _, imagen_umbralizada = cv2.threshold(gris, 127, 255, cv2.THRESH_BINARY)
+
+        imgCanny = cv2.Canny(imagen_umbralizada, 50, 150)
+        
 
         #Encontra contornos
         contornos,jerarquia = cv2.findContours(imgCanny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) # Modos de contorno que se pueden usar retr_(External, list, ccomp, tree)
@@ -35,31 +37,6 @@ class MarcoRojo(Algorithm):
         #cv2.imshow("Hola", imgCanny)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
-
-
-    
-    def umbralizadoRojo(self, imagen):
-    
-        # Convertir a espacio de color HSV
-        hsv = cv2.cvtColor(imagen, cv2.COLOR_BGR2HSV)
-
-        # Definir los rangos de color rojo en HSV
-        bajo_rojo1 = np.array([0, 120, 70])
-        alto_rojo1 = np.array([10, 255, 255])
-        bajo_rojo2 = np.array([170, 120, 70])
-        alto_rojo2 = np.array([180, 255, 255])
-
-        # Crear máscaras para ambos rangos de rojo
-        mascara1 = cv2.inRange(hsv, bajo_rojo1, alto_rojo1)
-        mascara2 = cv2.inRange(hsv, bajo_rojo2, alto_rojo2)
-
-        # Unir las dos máscaras
-        mascara_roja = cv2.bitwise_or(mascara1, mascara2)
-
-        # Aplicar la máscara a la imagen original
-        resultado = cv2.bitwise_and(imagen, imagen, mask=mascara_roja)
-
-        return resultado
 
 
     def biggestContour(self, contours):

@@ -12,7 +12,7 @@ class Detector_TH(Algorithm):
     def intersection(self, line1, line2):
         x1, y1, x2, y2 = line1
         x3, y3, x4, y4 = line2
-        
+
         # Ecuaciones de las rectas: y = mx + b
         m1 = (y2 - y1) / (x2 - x1) if x2 != x1 else float('inf')
         b1 = y1 - m1 * x1 if m1 != float('inf') else x1  # b = y - mx
@@ -41,7 +41,7 @@ class Detector_TH(Algorithm):
         return (int(x_intersect), int(y_intersect))
 
     def execute(self):
-        imagen = self.images[2].copy()    
+        imagen = self.images[2].copy()
         gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)  # Convertir a escala de grises
 
         edges = cv2.Canny(gray, 50, 150)
@@ -54,13 +54,13 @@ class Detector_TH(Algorithm):
             x1, y1, x2, y2 = lines[i][0]
             cv2.line(imagen, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Dibujar la línea en verde
 
-            for e in range(i + 1, len(lines)): 
+            for e in range(i + 1, len(lines)):
                 line1 = lines[i][0]
                 line2 = lines[e][0]  # Líneas verdes
                 intersection_point = self.intersection(line1, line2)
 
                 if intersection_point:
-                    cv2.circle(imagen, intersection_point, 5, (0, 0, 255), -1)  # Círculo rojo 
+                    cv2.circle(imagen, intersection_point, 5, (0, 0, 255), -1)  # Círculo rojo
                     cont += 1
 
 

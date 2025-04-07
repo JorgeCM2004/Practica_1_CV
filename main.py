@@ -9,7 +9,8 @@ class Runner:
     def __init__(self,
                  detector: Literal["KEYPOINTS"] = "KEYPOINTS",
                  test_path: str = None,
-                 models_path: str = None):
+                 models_path: str = None,
+                 result_path: str = None):
 
         # Definir nombre del detector:
         self.detector_name = detector
@@ -26,10 +27,20 @@ class Runner:
         else:
             self.models_path = None
 
-    def run(self, save: bool = True):
+        # Definir path de la carpeta donde guardar los resultados:
+        if result_path:
+            self.result_path = result_path
+        else:
+            self.result_path = None
+
+    def run(self, save: bool = True, verbose: bool = False):
         # Comprobación de tipos en parametro save.
         if not isinstance(save, bool):
             raise TypeError("El tipo de 'save' debe ser booleano (True o False).")
+        # Comprobación de tipos en parametro verbose.
+        if not isinstance(verbose, bool):
+            raise TypeError("El tipo de 'verbose' debe ser booleano (True o False).")
+
         pass
 
 if __name__ == '__main__':
@@ -58,7 +69,7 @@ if __name__ == '__main__':
     K = np.load(os.path.join(args.test_path, "intrinsics.txt"))""" # Hecho dentro de detector.
 
     # Crear el detector de la plantilla pertinente (con KEYPOINTS u otro).
-#    if args.detector == "KEYPOINTS:
+#    if args.detector == "KEYPOINTS":
 
 
     # Cargar el modelo 3D del cubo y colocarlo en el lugar pedido.

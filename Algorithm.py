@@ -2,7 +2,6 @@ import os
 import numpy as np
 import cv2
 from glob import glob
-from Detector_PI import Detector_PI
 from model3d import Model3D
 
 class Algorithm:
@@ -12,8 +11,6 @@ class Algorithm:
         self.test_path = test_path
 
         self.models_path = models_path
-
-        self.detector_pi = Detector_PI("SIFT")
 
         # Leer y almacenar variables y parametros dados por el problema.
         self._read_all()
@@ -77,7 +74,7 @@ class Algorithm:
             raise FileNotFoundError("Error al cargar 'intrinsics.txt'.")
 
     def _calculate_H_mm2template(self):
-        # Esquinas: derecha arriba, izquierda arriba, derecha abajo, izquierda abajo.
-        mm_mat = np.array([[0, 0], [210, 0], [0, 185], [210, 185]], dtype = np.float32) # Milimetros
-        pixel_mat = np.array([[0, 0], [self.template_img.shape[1], 0], [0, self.template_img.shape[0]], [self.template_img.shape[1],  self.template_img.shape[0]]], dtype = np.float32) # Píxeles
+        # Esquinas: Izquierda arriba, derecha arriba, izquierda abajo, derecha abajo.
+        mm_mat = np.array([[0, 0], [0, 210], [185, 0], [185, 210]], dtype = np.float32) # Milimetros (vertical, horizontal)
+        pixel_mat = np.array([[0, 0], [self.template_img.shape[1], 0], [0, self.template_img.shape[0]], [self.template_img.shape[1],  self.template_img.shape[0]]], dtype = np.float32) # Píxeles (horizontal, vertical)
         self.H_mm2template = cv2.getPerspectiveTransform(mm_mat, pixel_mat)

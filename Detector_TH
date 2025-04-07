@@ -1,0 +1,79 @@
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+from copy import copy
+from Algorithm import Algorithm
+
+
+class Detector_TH(Algorithm):
+    def __init__(self, test_path = None, models_path = None):
+        super().__init__(test_path, models_path)
+
+    def intersection(self, line1, line2):
+        x1, y1, x2, y2 = line1
+        x3, y3, x4, y4 = line2
+        
+        # Ecuaciones de las rectas: y = mx + b
+        m1 = (y2 - y1) / (x2 - x1) if x2 != x1 else float('inf')
+        b1 = y1 - m1 * x1 if m1 != float('inf') else x1  # b = y - mx
+
+        # m2, b2 para la segunda línea
+        m2 = (y4 - y3) / (x4 - x3) if x4 != x3 else float('inf')
+        b2 = y3 - m2 * x3 if m2 != float('inf') else x3
+
+        # Si las líneas son paralelas, no tienen intersección
+        if m1 == m2:
+            return None
+
+        if m1 != float('inf') and m2 != float('inf'):
+            # Resolver para x y y
+            x_intersect = (b2 - b1) / (m1 - m2)
+            y_intersect = m1 * x_intersect + b1
+        elif m1 == float('inf'):
+            # Línea 1 es vertical
+            x_intersect = x1
+            y_intersect = m2 * x_intersect + b2
+        else:
+            # Línea 2 es vertical
+            x_intersect = x3
+            y_intersect = m1 * x_intersect + b1
+
+        return (int(x_intersect), int(y_intersect))
+
+    def execute(self):
+        imagen = self.images[2].copy()    
+        gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)  # Convertir a escala de grises
+
+        edges = cv2.Canny(gray, 50, 150)
+
+        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=250, minLineLength=300, maxLineGap=40)
+
+        # Dibujar las líneas detectadas sobre la imagen original
+        cont = 0
+        for i in range(len(lines)):
+            x1, y1, x2, y2 = lines[i][0]
+            cv2.line(imagen, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Dibujar la línea en verde
+
+            for e in range(i + 1, len(lines)): 
+                line1 = lines[i][0]
+                line2 = lines[e][0]  # Líneas verdes
+                intersection_point = self.intersection(line1, line2)
+
+                if intersection_point:
+                    cv2.circle(imagen, intersection_point, 5, (0, 0, 255), -1)  # Círculo rojo 
+                    cont += 1
+
+
+        # Mostrar la imagen con las líneas detectadas
+        print("Numero de Intersecciones:", cont)
+        plt.imshow(cv2.cvtColor(imagen, cv2.COLOR_BGR2RGB))
+        plt.title("Líneas detectadas con la Transformada de Hough")
+        plt.show()
+
+
+
+
+
+Detector_TH(None, None).execute()
+
+

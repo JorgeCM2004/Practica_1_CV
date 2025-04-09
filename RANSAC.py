@@ -13,8 +13,9 @@ class RANSAC(Algorithm):
 
         self.detector_pi = Detector_PI(detector, matcher)
 
-    def execute(self):
-        for image in self.images:
+    def execute(self, verbose: bool = False) -> list[tuple[str, list, list]]:
+        result = []
+        for name, image in zip(self.images_names, self.images):
             # Obtenemos los puntos de interes de una imagen por medio de la imagen_template
             source_pts, destiny_pts = self.detector_pi.detect(self.template_img, image)
             for i in range(1, 11):
@@ -26,7 +27,6 @@ class RANSAC(Algorithm):
 
             P = self._calculate_P(H_template2image)
 
-            self._plot_axis_cube_image(image, P)
+            result.append((name, self._plot_axis_cube_image(image, P, verbose), P.copy()))
 
-RANSAC().execute()
-#r"C:\Users\harry\Documents\Proyectos-URJC\Python\Vision_Artificial\Practica_1_CV\imgs_template_real\test"
+        return result

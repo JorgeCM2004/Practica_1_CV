@@ -18,24 +18,28 @@ class Algorithm:
         # Calcular la matriz que transforma de milimetros a pixeles.
         self._calculate_H_mm2template()
 
-    def _plot_axis_cube_image(self, image, P):
+    def _plot_axis_cube_image(self, image, P, verbose: bool = False):
         origin_point = P @ np.array([0, 0, 0, 1])
         origin_point_image = (round(origin_point[0] / origin_point[2]), round(origin_point[1] / origin_point[2])) # Importante tupla de enteros.
+        print(origin_point_image)
         AXIS_LENGTH = 30
         points_colors = [(P @ np.array([AXIS_LENGTH, 0, 0, 1]), (255, 0, 0)), # X (Rojo)
                         (P @ np.array([0, AXIS_LENGTH, 0, 1]), (0, 255, 0)),  # Y (Verde)
                         (P @ np.array([0, 0, AXIS_LENGTH, 1]), (0, 0, 255))]  # Z (Azul)
 
-        image_copy = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         for point, color in points_colors:
             point_image = (round(point[0] / point[2]), round(point[1] / point[2]))
-            cv2.line(image_copy, origin_point_image, point_image, color, 5)
+            cv2.line(image, origin_point_image, point_image, color, 5)
         self._read_3D_object()
         self.model3d.scale(43.0 / 2)
         self.model3d.translate(np.array([2 * 9 + 10 + 1.5 * 43, 9 + 10 + 2.5 * 43, 43 / 2]).reshape(1, -1))
-        self.model3d.plot_on_image(image_copy, P)
-        cv2.imshow("3D info on images", cv2.resize(cv2.cvtColor(image_copy, cv2.COLOR_RGB2BGR), None, fx=0.3, fy=0.3))
-        cv2.waitKey(1000)
+        self.model3d.plot_on_image(image, P)
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        if verbose:
+            cv2.imshow("3D info on images", cv2.resize(image), None, fx=0.3, fy=0.3)
+            cv2.waitKey(1000)
+        return image
 
     def _calculate_P(self, H_template2image):
         H_mm2image = H_template2image @ self.H_mm2template
@@ -65,6 +69,8 @@ class Algorithm:
         # Imágenes si hay que buscar la carpeta.
         else:
             path_list = sorted(glob(os.path.join(self.dir_path, "imgs_template_real", "secuencia", "*.jpg")))
+
+        self.images_names = [os.path.basename(path) for path in path_list]
 
         for file in path_list:
             aux = cv2.imread(file)

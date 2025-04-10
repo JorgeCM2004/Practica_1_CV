@@ -27,7 +27,7 @@ class MarcoRojo(Algorithm):
         mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
 
         mask = cv2.bitwise_or(mask1, mask2)
-        
+
         resultado = cv2.bitwise_and(imagen_original, imagen_original, mask=mask)
 
         resultado_rgb = cv2.cvtColor(resultado, cv2.COLOR_BGR2RGB)
@@ -39,7 +39,7 @@ class MarcoRojo(Algorithm):
         imgCanny = cv2.Canny(gris, 50, 150)
 
         contornos, jerarquia = cv2.findContours(imgCanny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) # Encontramos los contornos
-        ''' 
+        '''
         Modos de contorno que se pueden usar retr_(External, list, ccomp, tree)
         Para recuperacion de contornos hay dos:
             - CHAIN_APPROX_SIMPLE no almacena los redundantes
@@ -68,7 +68,7 @@ class MarcoRojo(Algorithm):
         H_template2image = cv2.getPerspectiveTransform(template_points, destiny_points)
 
         P = self._calculate_P(H_template2image)
-        
+
         print(P.shape)
         print(imagen_original.shape)
         results = []
@@ -77,18 +77,18 @@ class MarcoRojo(Algorithm):
         escala = 0.25
         altura, ancho = imagen_original.shape[:2]
         imagen_redimensionada = cv2.resize(imagen_original, (int(ancho * escala), int(altura * escala)))
-        
+
         cv2.imshow("Puntos en las esquinas", imagen_redimensionada)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-        return results 
+        return results
 
     def biggestContour(self, contours, alto, ancho):
         biggest = np.array([])
         max_area = 0
         for c in contours:
-            area = cv2.contourArea(c) 
+            area = cv2.contourArea(c)
             if area > (alto * ancho * 0.05):
                 peri = cv2.arcLength(c, True)
                 approx = cv2.approxPolyDP(c, 0.02 * peri, True)
@@ -98,4 +98,4 @@ class MarcoRojo(Algorithm):
         return biggest, max_area
 
 
-MarcoRojo(r"C:\Users\alberto\Desktop\Practica_1_CV\imgs_template_real\test", None).execute()
+MarcoRojo(None, None).execute()

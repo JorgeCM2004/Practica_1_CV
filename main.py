@@ -17,7 +17,7 @@ class Runner:
         self.detector_name = detector
         print(f"Detector seleccionado: '{self.detector_name}'.")
 
-        # Definir path de la carpeta de imagenes:¡
+        # Definir path de la carpeta de imagenes:
         self.test_path = test_path
 
         # Definir path de la carpeta de los modelos 3D:

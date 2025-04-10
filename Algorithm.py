@@ -21,7 +21,6 @@ class Algorithm:
     def _plot_axis_cube_image(self, image, P, verbose: bool = False):
         origin_point = P @ np.array([0, 0, 0, 1])
         origin_point_image = (round(origin_point[0] / origin_point[2]), round(origin_point[1] / origin_point[2])) # Importante tupla de enteros.
-        print(origin_point_image)
         AXIS_LENGTH = 30
         points_colors = [(P @ np.array([AXIS_LENGTH, 0, 0, 1]), (255, 0, 0)), # X (Rojo)
                         (P @ np.array([0, AXIS_LENGTH, 0, 1]), (0, 255, 0)),  # Y (Verde)
@@ -37,7 +36,7 @@ class Algorithm:
         self.model3d.plot_on_image(image, P)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         if verbose:
-            cv2.imshow("3D info on images", cv2.resize(image), None, fx=0.3, fy=0.3)
+            cv2.imshow("3D info on images", cv2.resize(image, None, fx=0.3, fy=0.3))
             cv2.waitKey(1000)
         return image
 

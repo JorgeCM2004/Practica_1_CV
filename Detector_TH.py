@@ -14,7 +14,7 @@ class Detector_TH(Algorithm):
     def _intersection(self, line1, line2):
         x1, y1, x2, y2 = line1
         x3, y3, x4, y4 = line2
-        
+
         # Ecuaciones de las rectas: y = mx + b
         m1 = (y2 - y1) / (x2 - x1) if x2 != x1 else float('inf')
         b1 = y1 - m1 * x1 if m1 != float('inf') else x1  # b = y - mx
@@ -67,7 +67,7 @@ class Detector_TH(Algorithm):
                 best_score = score
                 best_c = cuadrilatero
                 resultado_final = resultado
-            
+
         if resultado_final is not None:
             img_with_selection = img.copy()
             best_c = np.array(best_c, dtype=np.int32)  # Convertir a entero
@@ -82,25 +82,25 @@ class Detector_TH(Algorithm):
 
 
     def execute(self):
-        imagen = self.images[0].copy()    
+        imagen = self.images[0].copy()
         gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)  # Convertir a escala de grises
 
         edges = cv2.Canny(gray, 50, 150)
-        
+
         # 1- OBTENER LAS RECTAS
         # lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=250, minLineLength=300, maxLineGap=40)
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=300, minLineLength=300, maxLineGap=40)
 
-        # 2- OBTENER LOS PUNTOS DE INTERSECCION 
+        # 2- OBTENER LOS PUNTOS DE INTERSECCION
         cont = 0
         intersecciones = []
         for i in range(len(lines)):
             x1, y1, x2, y2 = lines[i][0]
             #cv2.line(imagen, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Líneas verdes
 
-            for e in range(i + 1, len(lines)): 
+            for e in range(i + 1, len(lines)):
                 line1 = lines[i][0]
-                line2 = lines[e][0]  
+                line2 = lines[e][0]
                 intersection_point = self._intersection(line1, line2)
 
                 if intersection_point:
@@ -114,9 +114,9 @@ class Detector_TH(Algorithm):
         intersecciones = sorted(intersecciones, key=lambda p: p[0]) # Ordenamos por X
 
         pts_arriba = sorted(intersecciones[:2], key=lambda p: p[1])  # Ordenamos por Y
-        pts_abajo = sorted(intersecciones[2:], key=lambda p: p[1])  
+        pts_abajo = sorted(intersecciones[2:], key=lambda p: p[1])
 
-        # Puntos para los cuadrilateros 
+        # Puntos para los cuadrilateros
         ordered_pts = pts_arriba + pts_abajo
 
         cuadrilateros = list(combinations(ordered_pts, 4))
@@ -129,8 +129,8 @@ class Detector_TH(Algorithm):
         # print("Numero de Intersecciones:", cont)
         # plt.imshow(cv2.cvtColor(imagen, cv2.COLOR_BGR2RGB))
         # plt.title("Líneas detectadas con la Transformada de Hough")
-        # plt.show()      
-        
+        # plt.show()
+
 
 
 

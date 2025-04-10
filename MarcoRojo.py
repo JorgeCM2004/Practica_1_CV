@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from Algorithm import Algorithm
+import copy
 
 
 class MarcoRojo(Algorithm):
@@ -8,7 +9,8 @@ class MarcoRojo(Algorithm):
         super().__init__(test_path, models_path)
 
     def execute(self):
-        imagen_original = self.images[1]
+        imagen_original = (self.images[1]).copy()
+
         nombre_imagen = self.images_names[1]
 
         alto, ancho, canales = imagen_original.shape
@@ -67,9 +69,10 @@ class MarcoRojo(Algorithm):
 
         P = self._calculate_P(H_template2image)
         
-        print(P)
+        print(P.shape)
+        print(imagen_original.shape)
         results = []
-        results.append((imagen_original, self._plot_axis_cube_image(nombre_imagen, P, False), P.copy()))
+        results.append((nombre_imagen, self._plot_axis_cube_image(imagen_original, P, True), P.copy()))
 
         escala = 0.25
         altura, ancho = imagen_original.shape[:2]
@@ -79,6 +82,7 @@ class MarcoRojo(Algorithm):
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
+        return results 
 
     def biggestContour(self, contours, alto, ancho):
         biggest = np.array([])

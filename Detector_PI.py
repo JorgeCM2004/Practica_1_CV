@@ -18,12 +18,12 @@ class Detector_PI:
         self.matcher_name = matcher_name
         self._instance_matcher()
 
-    def detect(self, source_image, destiny_image, verbose: bool = False):
+    def detect(self, source_image, destiny_image, threshold: int = 0.8, verbose: bool = False):
         # Copiado de las diapositivas. (¿Cambiar?)
         kp1, des1 = self.descriptor.detectAndCompute(source_image,None)
         kp2, des2 = self.descriptor.detectAndCompute(destiny_image,None)
         matches = self.matcher.knnMatch(des1, des2, 2)
-        good = [m for m, n in matches if m.distance < 0.8 * n.distance]
+        good = [m for m, n in matches if m.distance < threshold * n.distance]
         if verbose:
             img3 = cv2.drawMatchesKnn(source_image, kp1, destiny_image, kp2, [[m] for m in good], None, flags=2)
             plt.imshow(cv2.cvtColor(img3, cv2.COLOR_BGR2RGB))
@@ -47,6 +47,6 @@ class Detector_PI:
             case "BF":
                 self.matcher = cv2.BFMatcher()
             case "FLANN":
-                self.matcher = cv2.FlannBasedMatcher() #Falta completar parametros de inicializacion.
+                self.matcher = cv2.FlannBasedMatcher()
             case _:
                 raise ValueError(f"El matcher {self.matcher_name} no es válido.")

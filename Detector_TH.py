@@ -15,7 +15,7 @@ class Detector_TH(Algorithm):
     def _intersection(self, line1, line2):
         x1, y1, x2, y2 = line1
         x3, y3, x4, y4 = line2
-        
+
         # Ecuaciones de las rectas: y = mx + b
         m1 = (y2 - y1) / (x2 - x1) if x2 != x1 else float('inf')
         b1 = y1 - m1 * x1 if m1 != float('inf') else x1  # b = y - mx
@@ -69,8 +69,12 @@ class Detector_TH(Algorithm):
                 best_score = score
                 best_c = cuadrilatero
                 resultado_final = resultado
+<<<<<<< HEAD
             break
             
+=======
+
+>>>>>>> 273986255c2608421936e11ebf9b862ccaf6d572
         if resultado_final is not None:
             img_with_selection = img.copy()
             best_c = np.array(best_c, dtype=np.int32)  # Convertir a entero
@@ -200,6 +204,7 @@ class Detector_TH(Algorithm):
 
 
     def execute(self):
+<<<<<<< HEAD
         imagen = self.images[1].copy()    
         # gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)  # Convertir a escala de grises
 
@@ -207,22 +212,33 @@ class Detector_TH(Algorithm):
         
         # Apaño con lo de alberto
         edges = self._marcorojo().copy() # Edges el nombre de la imagen
+=======
+        imagen = self.images[0].copy()
+        gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)  # Convertir a escala de grises
+
+        edges = cv2.Canny(gray, 50, 150)
+>>>>>>> 273986255c2608421936e11ebf9b862ccaf6d572
 
         # 1- OBTENER LAS RECTAS
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=250, minLineLength=200, maxLineGap=30)
         # lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=300, minLineLength=200, maxLineGap=30)
 
+<<<<<<< HEAD
         # 2- OBTENER LOS PUNTOS DE INTERSECCION 
 
         alto, ancho, _ = imagen.shape
+=======
+        # 2- OBTENER LOS PUNTOS DE INTERSECCION
+        cont = 0
+>>>>>>> 273986255c2608421936e11ebf9b862ccaf6d572
         intersecciones = []
         for i in range(len(lines)):
             x1, y1, x2, y2 = lines[i][0]
             cv2.line(imagen, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Líneas verdes
 
-            for e in range(i + 1, len(lines)): 
+            for e in range(i + 1, len(lines)):
                 line1 = lines[i][0]
-                line2 = lines[e][0]  
+                line2 = lines[e][0]
                 intersection_point = self._intersection(line1, line2)
 
                 if intersection_point and 0 <= intersection_point[0] < ancho and 0 <= intersection_point[1] < alto:
@@ -240,10 +256,21 @@ class Detector_TH(Algorithm):
         # combinaciones = self._crearGruposFactibles(grupos)
         # print("Combinaciones: ", len(combinaciones))
 
+<<<<<<< HEAD
         # ORGANIZAR CON ANGULOS
         grupos = self._agrupaPuntosAngulos(intersecciones)
         combinaciones = self._crearGruposFactibles2(grupos)
         print("Combinaciones: ", len(combinaciones))
+=======
+        pts_arriba = sorted(intersecciones[:2], key=lambda p: p[1])  # Ordenamos por Y
+        pts_abajo = sorted(intersecciones[2:], key=lambda p: p[1])
+
+        # Puntos para los cuadrilateros
+        ordered_pts = pts_arriba + pts_abajo
+
+        cuadrilateros = list(combinations(ordered_pts, 4))
+        print(cuadrilateros[:5])
+>>>>>>> 273986255c2608421936e11ebf9b862ccaf6d572
 
         # 4- HOMOGRAFIA para corregir perspectiva
         self._find_cuadrilatero(combinaciones[0:], imagen, self.template_img)
@@ -251,9 +278,15 @@ class Detector_TH(Algorithm):
         
         # Mostrar la imagen con las líneas detectadas
         # plt.imshow(cv2.cvtColor(imagen, cv2.COLOR_BGR2RGB))
+<<<<<<< HEAD
         # plt.title("Líneas detectadas con la Transformada de Hough")
         # plt.show()      
         
+=======
+        # plt.title("Líneas detectadas con la Transformada de Hough")
+        # plt.show()
+
+>>>>>>> 273986255c2608421936e11ebf9b862ccaf6d572
 
 
 

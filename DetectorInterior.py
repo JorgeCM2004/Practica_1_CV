@@ -211,10 +211,6 @@ class Detector_Interior(Algorithm):
         error = np.linalg.norm(puntosImagen - puntos_transformados, axis=1)
         return np.sum(error)  # Suma de los errores
 
-    def mostrar_imagen(self, imagen):
-
-        plt.imshow(cv2.cvtColor(imagen, cv2.COLOR_BGR2RGB))
-        plt.show()
 
     def execute(self):
 
@@ -222,66 +218,64 @@ class Detector_Interior(Algorithm):
             print("¡¡ No hay imágenes para procesar.")
             return
 
-        imagen = self.images[12].copy()
-        imagen = cv2.bilateralFilter(imagen, d=9, sigmaColor=75, sigmaSpace=75)
-
         # self.mostrar_imagen(imagen)
-        try:
-            # Mejora imagen
-            clashe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-            gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
-            imagen_mejorada = clashe.apply(gray)
-            # self.mostrar_imagen(imagen_mejorada)
+        resultados = []
+        for nombre, imagen in zip(self.images_names, self.images):
+            try:
+                # Mejora imagen
+                imagen = cv2.bilateralFilter(imagen, d=9, sigmaColor=75, sigmaSpace=75)
 
-            canal_rojo = imagen[:,:,2]
-            imagen_mejorada = cv2.Canny(canal_rojo, 50, 150)
+                # Umbralizar la imagen
+                img_umbralizada = self._umbralizado(imagen, "rojo")
+                
 
-            # Umbralizar la imagen
-            img_umbralizada = self._umbralizado(imagen, "rojo")
+                # Encontrar el marco más grande
+                marco_grande = self._marco_grande(img_umbralizada)
+
+                if marco_grande.shape[0] == 3:
+                    marco_grande = self.completar_cuadrado_con_3_puntos(marco_grande)
+
+                if marco_grande.shape[0] == 0:
+                    print("NINGUN Punto detectado")
+                    continue
+                    # plt.imshow(img_umbralizada)
+                    # plt.show()
+
+                elif marco_grande.shape[0] != 4:
+                    print(f"¡¡ No se han podido obtener los 4 puntos del marco.")
+                    continue
+
+                # Detectar patrón interno
+                patron_interno = self.detectar_patron_interno(imagen, marco_grande)
+
+                if patron_interno is not None:
+                    marco_grande = self._ordenar_esquinas_con_patron(marco_grande, patron_interno)
+                else:
+                    marco_grande = self._ordenar_esquinas(marco_grande)
+
+                # Dibujar el contorno en la imagen original
+                COLOR_AZUL = (255, 0, 0)
+                cv2.drawContours(imagen, [marco_grande.astype(int)], -1, COLOR_AZUL, 2)
+
+                # Obtener el ancho y alto de la imagen template
+                width = self.template_img.shape[1]  # Ancho de la imagen template
+                height = self.template_img.shape[0]  # Alto de la imagen template
+                puntosTemplate = np.float32([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]])
+
+                # Usar los puntos del contorno detectado como puntos de la imagen
+                puntosImagen = self._ordenar_esquinas(marco_grande).astype(np.float32)
+                H_template2image = cv2.getPerspectiveTransform(puntosTemplate, puntosImagen)
+    
+                P = self._calculate_P(H_template2image)
+
+                self._plot_axis_cube_image(imagen, P, True)
+
+                resultados.append((imagen, self._plot_axis_cube_image(imagen, P, True), P.copy()))
+
+            except Exception as e:
+                print("¡¡ Ocurrió un error durante el procesamiento: ", e)
             
-
-            # Encontrar el marco más grande
-            marco_grande = self._marco_grande(img_umbralizada)
-
-            if marco_grande.shape[0] == 3:
-                marco_grande = self.completar_cuadrado_con_3_puntos(marco_grande)
-
-            if marco_grande.shape[0] == 0:
-                print("NINGUN Punto detectado")
-                plt.imshow(img_umbralizada)
-                plt.show()
-
-            elif marco_grande.shape[0] != 4:
-                print(f"¡¡ No se han podido obtener los 4 puntos del marco.")
-                return
-
-            # Detectar patrón interno
-            patron_interno = self.detectar_patron_interno(imagen, marco_grande)
-
-            if patron_interno is not None:
-                marco_grande = self._ordenar_esquinas_con_patron(marco_grande, patron_interno)
-            else:
-                marco_grande = self._ordenar_esquinas(marco_grande)
-
-            # Dibujar el contorno en la imagen original
-            COLOR_AZUL = (255, 0, 0)
-            cv2.drawContours(imagen, [marco_grande.astype(int)], -1, COLOR_AZUL, 2)
-
-            # Obtener el ancho y alto de la imagen template
-            width = self.template_img.shape[1]  # Ancho de la imagen template
-            height = self.template_img.shape[0]  # Alto de la imagen template
-            puntosTemplate = np.float32([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]])
-
-            # Usar los puntos del contorno detectado como puntos de la imagen
-            puntosImagen = self._ordenar_esquinas(marco_grande).astype(np.float32)
-            H_template2image = cv2.getPerspectiveTransform(puntosTemplate, puntosImagen)
- 
-            P = self._calculate_P(H_template2image)
-
-            self._plot_axis_cube_image(imagen, P, True)
-
-        except Exception as e:
-            print("¡¡ Ocurrió un error durante el procesamiento: ", e)
+            return resultados
 
         
 Detector_Interior(None, None).execute()

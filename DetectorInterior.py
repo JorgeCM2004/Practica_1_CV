@@ -103,13 +103,20 @@ class Detector_Interior(Algorithm):
 
         # Verificar la orientacion usando el producto cruzado
         # Producto cruzado entre los vectores (p0 -> p1) y (p0 -> p3)
-        vector1 = puntos_ordenados[1] - puntos_ordenados[0]
-        vector2 = puntos_ordenados[3] - puntos_ordenados[0]
+        vector1 = puntos_ordenados[3] - puntos_ordenados[0]
+        vector2 = puntos_ordenados[1] - puntos_ordenados[0]
         cross_product = np.cross(vector1, vector2)
 
         # Si el producto cruzado es negativo, invertir el orden para mantener la orientación
         if cross_product < 0:
             puntos_ordenados[[1, 3]] = puntos_ordenados[[3, 1]]
+        
+        puntos_ordenados = np.array([
+                puntos_ordenados[1],  # Inferior izquierda
+                puntos_ordenados[0],  # Inferior derecha
+                puntos_ordenados[3],  # Superior derecha
+                puntos_ordenados[2]   # Superior izquierda
+            ], dtype=np.float32)
 
         return puntos_ordenados
 
@@ -126,6 +133,20 @@ class Detector_Interior(Algorithm):
 
         # Reordenar las esquinas comenzando desde la más cercana al patrón
         puntos_ordenados = np.roll(puntos, -esquina_cercana, axis=0)
+
+        # Ajustar el orden para garantizar que sea consistente con el formato esperado
+        # superior izquierda, superior derecha, inferior derecha, inferior izquierda
+        if np.cross(puntos_ordenados[1] - puntos_ordenados[0], puntos_ordenados[3] - puntos_ordenados[0]) < 0:
+            puntos_ordenados[[1, 3]] = puntos_ordenados[[3, 1]]  # Intercambiar si está al revés
+
+        puntos_ordenados = np.flip(puntos_ordenados, axis=0)
+
+        puntos_ordenados = np.array([
+                puntos_ordenados[1],  # Inferior izquierda
+                puntos_ordenados[0],  # Inferior derecha
+                puntos_ordenados[3],  # Superior derecha
+                puntos_ordenados[2]   # Superior izquierda
+            ], dtype=np.float32)
 
         return puntos_ordenados
     
@@ -183,6 +204,7 @@ class Detector_Interior(Algorithm):
             print("No se detectaron patrones internos.")
             return None
 
+
     def evaluar_homografia(self, marco_grande, puntosTemplate): # Compara las posibles homografias de los 4 puntos para quedarse con la que esta bien oriantada
 
         # Genera todas las permutaciones posibles de las esquinas
@@ -211,41 +233,35 @@ class Detector_Interior(Algorithm):
         error = np.linalg.norm(puntosImagen - puntos_transformados, axis=1)
         return np.sum(error)  # Suma de los errores
 
-
     def execute(self):
-
         if not self.images:
             print("¡¡ No hay imágenes para procesar.")
             return
 
-        # self.mostrar_imagen(imagen)
         resultados = []
         for nombre, imagen in zip(self.images_names, self.images):
             try:
-                # Mejora imagen
+                # 1. Preprocesamiento de la imagen
                 imagen = cv2.bilateralFilter(imagen, d=9, sigmaColor=75, sigmaSpace=75)
 
-                # Umbralizar la imagen
+                # 2. Umbralizar la imagen para detectar el color rojo
                 img_umbralizada = self._umbralizado(imagen, "rojo")
-                
 
-                # Encontrar el marco más grande
+                # 3. Encontrar el marco más grande
                 marco_grande = self._marco_grande(img_umbralizada)
 
                 if marco_grande.shape[0] == 3:
                     marco_grande = self.completar_cuadrado_con_3_puntos(marco_grande)
 
                 if marco_grande.shape[0] == 0:
-                    print("NINGUN Punto detectado")
+                    print(f"[ERROR] Imagen '{nombre}': No se detectaron puntos.")
                     continue
-                    # plt.imshow(img_umbralizada)
-                    # plt.show()
 
                 elif marco_grande.shape[0] != 4:
-                    print(f"¡¡ No se han podido obtener los 4 puntos del marco.")
+                    print(f"[ERROR] Imagen '{nombre}': No se pudieron obtener los 4 puntos del marco.")
                     continue
 
-                # Detectar patrón interno
+                # 4. Detectar patrón interno (si existe)
                 patron_interno = self.detectar_patron_interno(imagen, marco_grande)
 
                 if patron_interno is not None:
@@ -253,29 +269,28 @@ class Detector_Interior(Algorithm):
                 else:
                     marco_grande = self._ordenar_esquinas(marco_grande)
 
-                # Dibujar el contorno en la imagen original
+                # 5. Dibujar el contorno en la imagen original
                 COLOR_AZUL = (255, 0, 0)
                 cv2.drawContours(imagen, [marco_grande.astype(int)], -1, COLOR_AZUL, 2)
 
-                # Obtener el ancho y alto de la imagen template
-                width = self.template_img.shape[1]  # Ancho de la imagen template
-                height = self.template_img.shape[0]  # Alto de la imagen template
+                # 6. Calcular la homografía
+                width = self.template_img.shape[1]
+                height = self.template_img.shape[0]
                 puntosTemplate = np.float32([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]])
 
-                # Usar los puntos del contorno detectado como puntos de la imagen
-                puntosImagen = self._ordenar_esquinas(marco_grande).astype(np.float32)
-                H_template2image = cv2.getPerspectiveTransform(puntosTemplate, puntosImagen)
-    
+                H_template2image = self.evaluar_homografia(marco_grande, puntosTemplate)
+
+                # 7. Calcular la matriz de proyección y dibujar el cubo
                 P = self._calculate_P(H_template2image)
+                imagen_final = self._plot_axis_cube_image(imagen, P, True)
 
-                self._plot_axis_cube_image(imagen, P, True)
-
-                resultados.append((imagen, self._plot_axis_cube_image(imagen, P, True), P.copy()))
+                # 8. Guardar solo la imagen final
+                resultados.append((imagen_final, P.copy()))
 
             except Exception as e:
-                print("¡¡ Ocurrió un error durante el procesamiento: ", e)
-            
-            return resultados
+                print(f"[ERROR] Imagen '{nombre}': {e}")
 
-        
+        return resultados
+
+
 Detector_Interior(None, None).execute()

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from copy import copy
 from Algorithm import Algorithm
 from itertools import product
+from itertools import combinations
 from tqdm import tqdm
 import math
 
@@ -69,12 +70,8 @@ class Detector_TH(Algorithm):
                 best_score = score
                 best_c = cuadrilatero
                 resultado_final = resultado
-<<<<<<< HEAD
             break
             
-=======
-
->>>>>>> 273986255c2608421936e11ebf9b862ccaf6d572
         if resultado_final is not None:
             img_with_selection = img.copy()
             best_c = np.array(best_c, dtype=np.int32)  # Convertir a entero
@@ -177,121 +174,145 @@ class Detector_TH(Algorithm):
                 puntos_filtrados.append((x, y))
         return puntos_filtrados
 
-    def _marcorojo(self):
-        imagen_original = self.images[1]
-        nombre_imagen = self.images_names[1]
+    def _marcorojo(self, color="blanco", imagen_original):
+        colores = {
+            "blanco": {
+                "lower": np.array([0, 0, 200]),
+                "upper": np.array([180, 50, 255])
+            },
+            "rojo": {
+                "lower1": np.array([0, 100, 100]),
+                "upper1": np.array([10, 255, 255]),
+                "lower2": np.array([160, 100, 100]),
+                "upper2": np.array([180, 255, 255])
+            }
+        }
 
-        alto, ancho, canales = imagen_original.shape
+        if color not in colores: # Excepcion por pasar mal el color
+            raise ValueError(f"Color '{color}' no soportado. Usa 'rojo' o 'blanco'.")
+
 
         # print(alto, ancho, canales)
         hsv = cv2.cvtColor(imagen_original, cv2.COLOR_BGR2HSV) # Pasamos a brillo , saturacion, ... para hacer mas facil el umbralizado
 
-        lower_white = np.array([0, 0, 200])
-        upper_white = np.array([180, 50, 255])
-
-        mask = cv2.inRange(hsv, lower_white, upper_white)
+        if color == "blanco":
+            lower = colores["blanco"]["lower"]
+            upper = colores["blanco"]["upper"]
+            mask = cv2.inRange(hsv, lower, upper)
+        elif color == "rojo":
+            lower1 = colores["rojo"]["lower1"]
+            upper1 = colores["rojo"]["upper1"]
+            lower2 = colores["rojo"]["lower2"]
+            upper2 = colores["rojo"]["upper2"]
+            mask1 = cv2.inRange(hsv, lower1, upper1)
+            mask2 = cv2.inRange(hsv, lower2, upper2)
+            mask = cv2.bitwise_or(mask1, mask2)
         
         resultado = cv2.bitwise_and(imagen_original, imagen_original, mask=mask)
 
-        resultado_rgb = cv2.cvtColor(resultado, cv2.COLOR_BGR2RGB)
-
-        gris = cv2.cvtColor(resultado_rgb, cv2.COLOR_BGR2GRAY) # PASO LA IMAGEN A GRISES
+        gris = cv2.cvtColor(resultado, cv2.COLOR_BGR2GRAY) # PASO LA IMAGEN A GRISES
 
         imgCanny = cv2.Canny(gris, 50, 150)
 
         return imgCanny   
 
+    def _puntos_similares(self, puntos1, puntos2, umbral=10):
+        comun = []
 
+        for x1, y1 in puntos1:
+            for x2, y2 in puntos2:
+                dist = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+                if dist <= umbral:
+                    comun.append((x1,y1))
+                    break
+        return comun
+    
+    def _verPuntos(self, intersecciones, imagen, color):
+        for puntos in intersecciones:
+            cv2.circle(imagen, puntos, 5, color, -1)  # Círculo rojo Intersección
+
+    def _ordenar_puntos_con_homografia(self, puntos, template_img):
+        """
+        Ordena los puntos detectados utilizando la homografía calculada con el template.
+        :param puntos: Lista de puntos detectados.
+        :param template_img: Imagen del template para calcular la homografía.
+        :return: Puntos ordenados.
+        """
+        if len(puntos) < 4:
+            raise ValueError("Se necesitan al menos 4 puntos para calcular la homografía.")
+
+        # Definir los puntos del template
+        h, w = template_img.shape[:2]
+        template_corners = np.float32([[0, 0], [w - 1, 0], [w - 1, h - 1], [0, h - 1]])
+
+        # Calcular la homografía
+        puntos = np.float32(puntos).reshape(-1, 1, 2)
+        H, _ = cv2.findHomography(puntos, template_corners, cv2.RANSAC, 5.0)
+
+        if H is None:
+            raise ValueError("No se pudo calcular la homografía para ordenar los puntos.")
+
+        # Transformar los puntos detectados al espacio del template
+        puntos_ordenados = cv2.perspectiveTransform(puntos, H)
+        return puntos_ordenados.reshape(-1, 2)
 
     def execute(self):
-<<<<<<< HEAD
-        imagen = self.images[1].copy()    
-        # gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)  # Convertir a escala de grises
+        if not self.images:
+            print("¡¡ No hay imágenes para procesar.")
+            return
 
-        # edges = cv2.Canny(gray, 50, 150)
-        
-        # Apaño con lo de alberto
-        edges = self._marcorojo().copy() # Edges el nombre de la imagen
-=======
-        imagen = self.images[0].copy()
-        gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)  # Convertir a escala de grises
+        resultados = []
+        for nombre, imagen in zip(self.images_names, self.images):
+            try:
+                # 1. Mejora de la imagen
+                imagen = cv2.bilateralFilter(imagen, d=9, sigmaColor=75, sigmaSpace=75)
 
-        edges = cv2.Canny(gray, 50, 150)
->>>>>>> 273986255c2608421936e11ebf9b862ccaf6d572
+                # 2. Umbralizar la imagen para detectar el color rojo
+                img_umbralizada = self._umbralizado(imagen, "rojo")
 
-        # 1- OBTENER LAS RECTAS
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=250, minLineLength=200, maxLineGap=30)
-        # lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=300, minLineLength=200, maxLineGap=30)
+                # 3. Encontrar el marco más grande
+                marco_grande = self._marco_grande(img_umbralizada)
 
-<<<<<<< HEAD
-        # 2- OBTENER LOS PUNTOS DE INTERSECCION 
+                if marco_grande.shape[0] == 3:
+                    marco_grande = self.completar_cuadrado_con_3_puntos(marco_grande)
 
-        alto, ancho, _ = imagen.shape
-=======
-        # 2- OBTENER LOS PUNTOS DE INTERSECCION
-        cont = 0
->>>>>>> 273986255c2608421936e11ebf9b862ccaf6d572
-        intersecciones = []
-        for i in range(len(lines)):
-            x1, y1, x2, y2 = lines[i][0]
-            cv2.line(imagen, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Líneas verdes
+                if marco_grande.shape[0] == 0:
+                    print("NINGÚN punto detectado.")
+                    continue
 
-            for e in range(i + 1, len(lines)):
-                line1 = lines[i][0]
-                line2 = lines[e][0]
-                intersection_point = self._intersection(line1, line2)
+                elif marco_grande.shape[0] != 4:
+                    print(f"¡¡ No se han podido obtener los 4 puntos del marco.")
+                    continue
 
-                if intersection_point and 0 <= intersection_point[0] < ancho and 0 <= intersection_point[1] < alto:
-                    intersecciones.append(intersection_point)
+                # 4. Detectar patrón interno (si existe)
+                patron_interno = self.detectar_patron_interno(imagen, marco_grande)
 
-        intersecciones = self._filtradoAtipicos(intersecciones)
+                if patron_interno is not None:
+                    marco_grande = self._ordenar_esquinas_con_patron(marco_grande, patron_interno)
+                else:
+                    marco_grande = self._ordenar_esquinas(marco_grande)
 
-        for puntos in intersecciones:
-           cv2.circle(imagen, puntos, 5, (0, 0, 255), -1)  # Círculo rojo Intersección
+                # 5. Dibujar el contorno en la imagen original
+                COLOR_AZUL = (255, 0, 0)
+                cv2.drawContours(imagen, [marco_grande.astype(int)], -1, COLOR_AZUL, 2)
 
-        # 3- ORDENAR LOS PUNTOS por ejes
-        print("Puntos de Interseccion: ", len(intersecciones))
-        
-        # grupos = self._agrupaPuntos(intersecciones)
-        # combinaciones = self._crearGruposFactibles(grupos)
-        # print("Combinaciones: ", len(combinaciones))
+                # 6. Evaluar la homografía
+                width = self.template_img.shape[1]  # Ancho de la imagen template
+                height = self.template_img.shape[0]  # Alto de la imagen template
+                puntosTemplate = np.float32([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]])
 
-<<<<<<< HEAD
-        # ORGANIZAR CON ANGULOS
-        grupos = self._agrupaPuntosAngulos(intersecciones)
-        combinaciones = self._crearGruposFactibles2(grupos)
-        print("Combinaciones: ", len(combinaciones))
-=======
-        pts_arriba = sorted(intersecciones[:2], key=lambda p: p[1])  # Ordenamos por Y
-        pts_abajo = sorted(intersecciones[2:], key=lambda p: p[1])
+                puntosImagen = marco_grande.astype(np.float32)
+                H_template2image = cv2.getPerspectiveTransform(puntosTemplate, puntosImagen)
 
-        # Puntos para los cuadrilateros
-        ordered_pts = pts_arriba + pts_abajo
+                # 7. Calcular la matriz de proyección y dibujar el cubo
+                P = self._calculate_P(H_template2image)
+                self._plot_axis_cube_image(imagen, P, True)
 
-        cuadrilateros = list(combinations(ordered_pts, 4))
-        print(cuadrilateros[:5])
->>>>>>> 273986255c2608421936e11ebf9b862ccaf6d572
+                resultados.append((imagen, self._plot_axis_cube_image(imagen, P, True), P.copy()))
 
-        # 4- HOMOGRAFIA para corregir perspectiva
-        self._find_cuadrilatero(combinaciones[0:], imagen, self.template_img)
+            except Exception as e:
+                print("¡¡ Ocurrió un error durante el procesamiento: ", e)
 
-        
-        # Mostrar la imagen con las líneas detectadas
-        # plt.imshow(cv2.cvtColor(imagen, cv2.COLOR_BGR2RGB))
-<<<<<<< HEAD
-        # plt.title("Líneas detectadas con la Transformada de Hough")
-        # plt.show()      
-        
-=======
-        # plt.title("Líneas detectadas con la Transformada de Hough")
-        # plt.show()
-
->>>>>>> 273986255c2608421936e11ebf9b862ccaf6d572
-
-
-
-
-
-Detector_TH(None, None).execute()
+        return resultados
 
 

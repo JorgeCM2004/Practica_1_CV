@@ -14,28 +14,9 @@ class Detector_Interior(Algorithm):
     def __init__(self, test_path=None, models_path=None):
         super().__init__(test_path, models_path)
 
-    def _marco_grande(self, imagen): # Encuentra el contorno mas grande que cumpla con los requisitos
-
-        imgCanny = cv2.Canny(imagen, 50, 150)
-        contornos, jerarquia = cv2.findContours(imgCanny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        alto, ancho = imagen.shape[:2]
-        marco_grande, _ = self._biggestContour(contornos, alto, ancho)
-
-        return marco_grande
-
-    def _biggestContour(self, contours, alto, ancho): # Encuentra el contorno mas grande con 4 vertices
-
-        biggest = np.array([])
-        max_area = 0
-        for c in contours:
-            area = cv2.contourArea(c)
-            if area > (alto * ancho * 0.05):  # Filtrar contornos pequeños
-                peri = cv2.arcLength(c, True)
-                approx = cv2.approxPolyDP(c, 0.02 * peri, True)
-                if area > max_area and len(approx) == 4:
-                    biggest = approx
-                    max_area = area
-        return biggest, max_area
+    # -------------------------------
+    # 1. Métodos de Preprocesamiento
+    # -------------------------------
 
     def _umbralizado(self, imagen_original, color="blanco"): # Aplica un umbral basado en el color especificado
 
@@ -80,6 +61,33 @@ class Detector_Interior(Algorithm):
 
         resultado = cv2.bitwise_and(imagen_original, imagen_original, mask=mask)
         return resultado
+    
+    # --------------------------------------------------
+    # 2. Deteccion de contornos y Métodos de Ordenación
+    # --------------------------------------------------
+
+    def _marco_grande(self, imagen): # Encuentra el contorno mas grande que cumpla con los requisitos
+
+        imgCanny = cv2.Canny(imagen, 50, 150)
+        contornos, jerarquia = cv2.findContours(imgCanny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        alto, ancho = imagen.shape[:2]
+        marco_grande, _ = self._biggestContour(contornos, alto, ancho)
+
+        return marco_grande
+
+    def _biggestContour(self, contours, alto, ancho): # Encuentra el contorno mas grande con 4 vertices
+
+        biggest = np.array([])
+        max_area = 0
+        for c in contours:
+            area = cv2.contourArea(c)
+            if area > (alto * ancho * 0.05):  # Filtrar contornos pequeños
+                peri = cv2.arcLength(c, True)
+                approx = cv2.approxPolyDP(c, 0.02 * peri, True)
+                if area > max_area and len(approx) == 4:
+                    biggest = approx
+                    max_area = area
+        return biggest, max_area
 
     def _ordenar_esquinas(self, puntos):
         
@@ -150,6 +158,11 @@ class Detector_Interior(Algorithm):
 
         return puntos_ordenados
     
+
+    # ------------------------------------------------------------
+    # 3. Completado de puntos para la Homografia y patron interno
+    # ------------------------------------------------------------
+
     def completar_cuadrado_con_3_puntos(self, puntos):
         if puntos.shape[2] != 3:
             raise ValueError("Se necesitan al menos 3 puntos para completar el cuadrado.")
@@ -204,6 +217,9 @@ class Detector_Interior(Algorithm):
             print("No se detectaron patrones internos.")
             return None
 
+    # -------------------------------
+    # 4. Homografia
+    # -------------------------------
 
     def evaluar_homografia(self, marco_grande, puntosTemplate): # Compara las posibles homografias de los 4 puntos para quedarse con la que esta bien oriantada
 
@@ -232,6 +248,10 @@ class Detector_Interior(Algorithm):
         # Calcular el error de reproyección
         error = np.linalg.norm(puntosImagen - puntos_transformados, axis=1)
         return np.sum(error)  # Suma de los errores
+
+    # -------------------------------
+    # 5. Ejecucion principal
+    # -------------------------------
 
     def execute(self):
         if not self.images:

@@ -17,7 +17,7 @@ class Detector_PI:
     def change_matcher(self, matcher_name: Literal["BF", "FLANN"] = "BF"):
         self.matcher_name = matcher_name
         self._instance_matcher()
-
+ 
     def detect(self, source_image, destiny_image, threshold: int = 0.8, verbose: bool = False):
         # Copiado de las diapositivas. (¿Cambiar?)
         kp1, des1 = self.descriptor.detectAndCompute(source_image,None)

@@ -5,10 +5,11 @@ import cv2
 from typing import Literal
 from Saver import Saver
 from RANSAC import RANSAC
+from MarcoRojo import MarcoRojo
 
 class Runner:
     def __init__(self,
-                 detector: Literal["KEYPOINTS"] = "KEYPOINTS",
+                 detector: Literal["KEYPOINTS", "MARCO_ROJO"] = "KEYPOINTS",
                  test_path: str = None,
                  models_path: str = None,
                  result_path: str = None):
@@ -33,6 +34,8 @@ class Runner:
         match self.detector_name:
             case "KEYPOINTS":
                 self.detector = RANSAC(self.test_path, self.models_path)
+            case "MARCO_ROJO":
+                self.detector = MarcoRojo(self.test_path, self.models_path)
             case _:
                 raise ValueError("El nombre del detector no existe.")
 

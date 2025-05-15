@@ -8,7 +8,7 @@ class MarcoRojo(Algorithm):
     def __init__(self, test_path=None, models_path=None):
         super().__init__(test_path, models_path)
 
-    def execute(self):
+    def execute(self, verbose):
         resultados = []
         for nombre, imagen in zip(self.images_names, self.images):
             try:
@@ -30,7 +30,7 @@ class MarcoRojo(Algorithm):
                     etiquetas_marco_1 = ["0", "1", "2", "3"]
                     for i, punto in enumerate(marco_grande):
                         x, y = int(punto[0]), int(punto[1])
-                        destiny_points.append([x,y]) # np array s.type = f32
+                        destiny_points.append([x,y]) 
                         cv2.circle(imagen, (x, y), 5, (0, 0, 255), -1)
                         cv2.putText(imagen, etiquetas_marco_1[i], (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
                 
@@ -42,7 +42,7 @@ class MarcoRojo(Algorithm):
 
                 P = self._calculate_P(H_template2image)
 
-                resultados.append((imagen, self._plot_axis_cube_image(imagen, P, True), P.copy()))
+                resultados.append((imagen, self._plot_axis_cube_image(imagen, P, verbose), P.copy()))
 
 
             except Exception as e:
@@ -113,10 +113,10 @@ class MarcoRojo(Algorithm):
         suma = puntos.sum(axis=1)
         resta = np.diff(puntos, axis=1)
     
-        puntos_ordenados[0] = puntos[np.argmin(suma)]  # superior izquierda
-        puntos_ordenados[3] = puntos[np.argmax(suma)]  # inferior derecha
-        puntos_ordenados[1] = puntos[np.argmin(resta)] # superior derecha
-        puntos_ordenados[2] = puntos[np.argmax(resta)] # inferior izquierda
+        puntos_ordenados[0] = puntos[np.argmin(suma)] 
+        puntos_ordenados[3] = puntos[np.argmax(suma)]  
+        puntos_ordenados[1] = puntos[np.argmin(resta)]
+        puntos_ordenados[2] = puntos[np.argmax(resta)] 
 
         return puntos_ordenados
     
@@ -127,24 +127,21 @@ class MarcoRojo(Algorithm):
 
         puntos = puntos.reshape((3, 2))
 
-        max_dist = 0
+        distancia_maxima = 0
         diagonal = (0, 1)
         for i in range(3):
             for j in range(i + 1, 3):
-                dist = np.linalg.norm(puntos[i] - puntos[j])
-                if dist > max_dist:
-                    max_dist = dist
+                dist = np.linalg.norm(puntos[i] - puntos[j]) # Distancia euclidea entre dos puntos
+                if dist > distancia_maxima:
+                    distancia_maxima = dist
                     diagonal = (i, j)
 
-        A = puntos[diagonal[0]]
-        B = puntos[diagonal[1]]
+        A = puntos[diagonal[0]] # Primer punto de la diagonal
+        B = puntos[diagonal[1]] # Segundo punto de la diagonal
         C = puntos[3 - diagonal[0] - diagonal[1]] 
 
-        centro = (A + B) / 2
+        centro = (A + B) / 2 
 
         D = 2 * centro - C
 
         return np.array([A, B, C, D], dtype=np.float32)
-
-
-MarcoRojo(None, None).execute()

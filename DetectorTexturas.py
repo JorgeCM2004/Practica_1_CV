@@ -6,59 +6,54 @@ from Algorithm import Algorithm
 from itertools import product
 from itertools import combinations
 from tqdm import tqdm
-import math
-import itertools
 
 
-class Detector_Interior(Algorithm):
+
+class Detector_Texturas(Algorithm):
     def __init__(self, test_path=None, models_path=None):
         super().__init__(test_path, models_path)
+
+    def _homografia_fija(self):
+        # Genera una matriz de homografía identidad fija 
+        return np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float32)
 
     # -------------------------------
     # 1. Métodos de Preprocesamiento
     # -------------------------------
 
-    def _umbralizado(self, imagen_original, color="blanco"): # Aplica un umbral basado en el color especificado
+    def _umbralizado(self, imagen_original, ajuste_factor=0, filtro_tamano=5):
 
-        colores = {
-            "blanco": {
-                "lower": np.array([0, 0, 200]),
-                "upper": np.array([180, 50, 255])
-            },
-            "rojo": {
-                "lower1": np.array([0, 100, 100]),
-                "upper1": np.array([10, 255, 255]),
-                "lower2": np.array([160, 100, 100]),
-                "upper2": np.array([180, 255, 255])
-            },
-            "azul": {
-                "lower": np.array([100, 150, 0]),
-                "upper": np.array([140, 255, 255])
-            }
-        }
+        if imagen_original is None or len(imagen_original.shape) != 3:
+            # La imagen proporcionada no es válida.
+            raise ValueError("")
 
-        if color not in colores:
-            raise ValueError("Color ", color, " no soportado. Usa 'blanco', 'rojo' o 'azul'.")
-
+        # Convertir la imagen a espacio de color HSV
         hsv = cv2.cvtColor(imagen_original, cv2.COLOR_BGR2HSV)
 
-        if color == "blanco":
-            lower = colores["blanco"]["lower"]
-            upper = colores["blanco"]["upper"]
-            mask = cv2.inRange(hsv, lower, upper)
-        elif color == "rojo":
-            lower1 = colores["rojo"]["lower1"]
-            upper1 = colores["rojo"]["upper1"]
-            lower2 = colores["rojo"]["lower2"]
-            upper2 = colores["rojo"]["upper2"]
-            mask1 = cv2.inRange(hsv, lower1, upper1)
-            mask2 = cv2.inRange(hsv, lower2, upper2)
-            mask = cv2.bitwise_or(mask1, mask2)
-        elif color == "azul":
-            lower = colores["azul"]["lower"]
-            upper = colores["azul"]["upper"]
-            mask = cv2.inRange(hsv, lower, upper)
+        # Definir los umbrales iniciales para el color rojo
+        lower1 = np.array([0, 160, 120])
+        upper1 = np.array([60, 255, 255])
+        lower2 = np.array([160, 90, 100])
+        upper2 = np.array([180, 255, 255])
 
+        # Ajustar dinámicamente los valores de umbral
+        mean_val = np.mean(hsv[:, :, 0])  # Promedio del canal H
+        lower1[0] = max(0, lower1[0] - int(mean_val * ajuste_factor))
+        upper1[0] = min(180, upper1[0] + int(mean_val * ajuste_factor))
+        lower2[0] = max(0, lower2[0] - int(mean_val * ajuste_factor))
+        upper2[0] = min(180, upper2[0] + int(mean_val * ajuste_factor))
+
+        # Crear máscaras para los dos rangos de rojo
+        mask1 = cv2.inRange(hsv, lower1, upper1)
+        mask2 = cv2.inRange(hsv, lower2, upper2)
+
+        # Combinar las máscaras
+        mask = cv2.bitwise_or(mask1, mask2)
+
+        # Aplicar un filtro adaptativo para suavizar la máscara
+        mask = cv2.medianBlur(mask, filtro_tamano)
+
+        # Aplicar la máscara a la imagen original
         resultado = cv2.bitwise_and(imagen_original, imagen_original, mask=mask)
         return resultado
     
@@ -68,7 +63,8 @@ class Detector_Interior(Algorithm):
 
     def _marco_grande(self, imagen): # Encuentra el contorno mas grande que cumpla con los requisitos
 
-        imgCanny = cv2.Canny(imagen, 50, 150)
+        blurred = cv2.GaussianBlur(imagen, (5, 5), 0)
+        imgCanny = cv2.Canny(blurred, 50, 150)
         contornos, jerarquia = cv2.findContours(imgCanny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         alto, ancho = imagen.shape[:2]
         marco_grande, _ = self._biggestContour(contornos, alto, ancho)
@@ -81,7 +77,7 @@ class Detector_Interior(Algorithm):
         max_area = 0
         for c in contours:
             area = cv2.contourArea(c)
-            if area > (alto * ancho * 0.05):  # Filtrar contornos pequeños
+            if area > (alto * ancho * 0.04):  # Filtrar contornos pequeños
                 peri = cv2.arcLength(c, True)
                 approx = cv2.approxPolyDP(c, 0.02 * peri, True)
                 if area > max_area and len(approx) == 4:
@@ -165,7 +161,8 @@ class Detector_Interior(Algorithm):
 
     def completar_cuadrado_con_3_puntos(self, puntos):
         if puntos.shape[2] != 3:
-            raise ValueError("Se necesitan al menos 3 puntos para completar el cuadrado.")
+            # Se necesitan al menos 3 puntos para completar el cuadrado.
+            raise ValueError("")
 
         puntos = puntos.reshape((3, 2))
 
@@ -211,53 +208,20 @@ class Detector_Interior(Algorithm):
 
         if circles is not None:
             circles = np.round(circles[0, :]).astype("int")
-            print("Círculos detectados:", len(circles))
             return circles[0]  # Devuelve el primer círculo detectado 
         else:
-            print("No se detectaron patrones internos.")
+            # No se detectaron patrones internos
             return None
 
     # -------------------------------
-    # 4. Homografia
+    # 4. Ejecucion principal
     # -------------------------------
 
-    def evaluar_homografia(self, marco_grande, puntosTemplate): # Compara las posibles homografias de los 4 puntos para quedarse con la que esta bien oriantada
-
-        # Genera todas las permutaciones posibles de las esquinas
-        permutaciones = list(itertools.permutations(marco_grande, 4))
-        mejor_homografia = None
-        mejor_puntaje = float('inf')  # Menor puntaje = Menor diferencia con template = es mejor 
-
-        for permutacion in permutaciones:
-            puntosImagen = np.array(permutacion, dtype=np.float32)
-            H = cv2.getPerspectiveTransform(puntosTemplate, puntosImagen)
-
-            # Evaluar la homografia
-            puntaje = self._evaluar_calidad_homografia(H, puntosTemplate, puntosImagen)
-            if puntaje < mejor_puntaje:
-                mejor_puntaje = puntaje
-                mejor_homografia = H
-
-        return mejor_homografia
-
-    def _evaluar_calidad_homografia(self, H, puntosTemplate, puntosImagen): # Calculo del error entre template y homogradia
-
-        # Transformar los puntos de la plantilla usando la homografía
-        puntos_transformados = cv2.perspectiveTransform(np.array([puntosTemplate]), H)[0]
-
-        # Calcular el error de reproyección
-        error = np.linalg.norm(puntosImagen - puntos_transformados, axis=1)
-        return np.sum(error)  # Suma de los errores
-
-    # -------------------------------
-    # 5. Ejecucion principal
-    # -------------------------------
-
-    def execute(self):
+    def execute(self, verbose: bool = False):
         if not self.images:
-            print("¡¡ No hay imágenes para procesar.")
             return
 
+        cont = 0
         resultados = []
         for nombre, imagen in zip(self.images_names, self.images):
             try:
@@ -265,7 +229,7 @@ class Detector_Interior(Algorithm):
                 imagen = cv2.bilateralFilter(imagen, d=9, sigmaColor=75, sigmaSpace=75)
 
                 # 2. Umbralizar la imagen para detectar el color rojo
-                img_umbralizada = self._umbralizado(imagen, "rojo")
+                img_umbralizada = self._umbralizado(imagen, ajuste_factor=0.3, filtro_tamano=3)
 
                 # 3. Encontrar el marco más grande
                 marco_grande = self._marco_grande(img_umbralizada)
@@ -274,43 +238,38 @@ class Detector_Interior(Algorithm):
                     marco_grande = self.completar_cuadrado_con_3_puntos(marco_grande)
 
                 if marco_grande.shape[0] == 0:
-                    print(f"[ERROR] Imagen '{nombre}': No se detectaron puntos.")
+                    # ERROR] No se detectaron puntos.
                     continue
 
-                elif marco_grande.shape[0] != 4:
-                    print(f"[ERROR] Imagen '{nombre}': No se pudieron obtener los 4 puntos del marco.")
-                    continue
+                elif marco_grande.shape[0] == 4:
+                    # 4. Detectar patrón interno (si existe)
+                    patron_interno = self.detectar_patron_interno(imagen, marco_grande)
 
-                # 4. Detectar patrón interno (si existe)
-                patron_interno = self.detectar_patron_interno(imagen, marco_grande)
+                    if patron_interno is not None:
+                        marco_grande = self._ordenar_esquinas_con_patron(marco_grande, patron_interno)
+                    else:
+                        marco_grande = self._ordenar_esquinas(marco_grande)
 
-                if patron_interno is not None:
-                    marco_grande = self._ordenar_esquinas_con_patron(marco_grande, patron_interno)
+                    # 6. Calcular la homografía
+                    width = self.template_img.shape[1]
+                    height = self.template_img.shape[0]
+                    puntosTemplate = np.float32([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]])
+
+                    H_template2image = cv2.getPerspectiveTransform(puntosTemplate, marco_grande)
+
                 else:
-                    marco_grande = self._ordenar_esquinas(marco_grande)
-
-                # 5. Dibujar el contorno en la imagen original
-                COLOR_AZUL = (255, 0, 0)
-                cv2.drawContours(imagen, [marco_grande.astype(int)], -1, COLOR_AZUL, 2)
-
-                # 6. Calcular la homografía
-                width = self.template_img.shape[1]
-                height = self.template_img.shape[0]
-                puntosTemplate = np.float32([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]])
-
-                H_template2image = self.evaluar_homografia(marco_grande, puntosTemplate)
+                    H_template2image =self._homografia_fija()
 
                 # 7. Calcular la matriz de proyección y dibujar el cubo
                 P = self._calculate_P(H_template2image)
-                imagen_final = self._plot_axis_cube_image(imagen, P, True)
+                imagen_final = self._plot_axis_cube_image(imagen, P, False)
 
                 # 8. Guardar solo la imagen final
-                resultados.append((imagen_final, P.copy()))
+                resultados.append((nombre, imagen_final, P.copy()))
 
             except Exception as e:
-                print(f"[ERROR] Imagen '{nombre}': {e}")
+                # [ERROR] Imagen 
+                continue
 
         return resultados
 
-
-Detector_Interior(None, None).execute()

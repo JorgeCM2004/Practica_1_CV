@@ -6,10 +6,11 @@ from typing import Literal
 from Saver import Saver
 from RANSAC import RANSAC
 from MarcoRojo import MarcoRojo
+from DetectorTexturas import Detector_Texturas
 
 class Runner:
     def __init__(self,
-                 detector: Literal["KEYPOINTS", "MARCO_ROJO"] = "KEYPOINTS",
+                 detector: Literal["KEYPOINTS", "MARCO_ROJO", "DETECTOR_TEXTURAS"] = "KEYPOINTS",
                  test_path: str = None,
                  models_path: str = None,
                  result_path: str = None):
@@ -36,6 +37,9 @@ class Runner:
                 self.detector = RANSAC(self.test_path, self.models_path)
             case "MARCO_ROJO":
                 self.detector = MarcoRojo(self.test_path, self.models_path)
+
+            case "DETECTOR_TEXTURAS":
+                self.detector = Detector_Texturas(self.test_path, self.models_path)
             case _:
                 raise ValueError("El nombre del detector no existe.")
 
@@ -60,7 +64,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Crea y ejecuta un detector sobre las imágenes de test.')
     parser.add_argument(
-        '--detector', default="KEYPOINTS", help = 'Nombre del detector a ejecutar.')
+        '--detector', default="DETECTOR_TEXTURAS", help = 'Nombre del detector a ejecutar.')
     parser.add_argument(
         '--test_path', default = None, help = 'Carpeta con las imágenes de test.')
     parser.add_argument(
